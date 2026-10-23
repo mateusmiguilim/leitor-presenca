@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Leitor de Presença - CEFET-MG</title>
+  <!-- Biblioteca aberta de alta performance para leitura contínua -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #f1f5f9; margin: 0; padding: 16px; display: flex; justify-content: center; }
+    .card { background: #ffffff; max-width: 440px; width: 100%; border-radius: 12px; padding: 22px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); text-align: center; }
+    h2 { color: #0b3954; margin: 8px 0 16px 0; font-size: 20px; }
+    label { display: block; text-align: left; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 5px; }
+    select { width: 100%; padding: 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 14px; margin-bottom: 14px; background-color: #fff; }
+    select:focus { border-color: #0b3954; outline: none; }
+    #cameraArea { width: 100%; max-width: 320px; margin: 12px auto; border-radius: 10px; overflow: hidden; background: #000; min-height: 250px; display: none; }
+    .btn-acao { width: 100%; background: #0b3954; color: white; border: none; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+    .btn-acao:active { background: #08283b; }
+    #feedback { margin-top: 16px; padding: 14px; border-radius: 8px; font-size: 14px; font-weight: 600; display: none; }
+    .sucesso { background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .duplicado { background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .erro { background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+    .status-cam { font-size: 13px; color: #64748b; margin-top: 8px; font-weight: 500; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h2>Registro de Presença</h2>
+
+    <label for="selEvento">1. Selecione o Evento:</label>
+    <select id="selEvento" onchange="atualizarAtividades()">
+      <option value="">Carregando eventos...</option>
+    </select>
+
+    <label for="selAtividade">2. Selecione a Atividade:</label>
+    <select id="selAtividade" disabled>
+      <option value="">Escolha primeiro o evento acima...</option>
+    </select>
+
+    <button id="btnIniciar" class="btn-acao" onclick="iniciarLeitor()">Ligar Câmera Contínua</button>
+    <div id="statusCam" class="status-cam"></div>
+
+    <div id="cameraArea"></div>
+    <div id="feedback"></div>
+  </div>
+
+  <script>
+    // URL da sua implantação Web App do Apps Script
+    const URL_APPS_SCRIPT = "COLE_AQUI_A_URL_DO_SEU_APPS_SCRIPT";
+
+    var mapaEventos = {};
+    var html5QrCode = null;
+    var leituraPausada = false;
+
+    window.onload = function() {
+      fetch(URL_APPS_SCRIPT + "?acao=obterAtividades")
+        .then(res => res.json())
+        .then(dados => {
+          mapaEventos = dados;
+          var selEvento = document.getElementById("selEvento");
+          selEvento.innerHTML = '<option value="">Selecione o evento...</option>';
+          for (var evt in dados) {
+            var opt = document.createElement("option");
+            opt.value = evt;
+            opt.innerText = evt;
+            selEvento.appendChild(opt);
+          }
+        })
+        .catch(err => {
+          document.getElementById("statusCam").innerText = "Aguardando conexão com a planilha...";
+        });
+    };
+
+    function atualizarAtividades() {
+      var evtEscolhido = document.getElementById("selEvento").value;
+      var selAtiv = document.getElementById("selAtividade");
+      selAtiv.innerHTML = '<option value="">Selecione a atividade...</option>';
+
+      if (evtEscolhido && mapaEventos[evtEscolhido]) {
+        mapaEventos[evtEscolhido].forEach(function(ativ) {
+          var opt = document.createElement("option");
+          opt.value = ativ;
+          opt.innerText = ativ;
+          selAtiv.appendChild(opt);
+        });
+        selAtiv.disabled = false;
+      } else {
+        selAtiv.disabled = true;
+      }
+    }
+
+    function iniciarLeitor() {
+      var evt = document.getElementById("selEvento").value;
+      var ativ = document.getElementById("selAtividade").value;
+
+      if (!evt || !ativ) {
+        alert("Selecione o Evento e a Atividade antes de ligar a câmera!");
+        return;
+      }
+
+      document.getElementById("btnIniciar").style.display = "none";
+      document.getElementById("cameraArea").style.display = "block";
+      document.getElementById("statusCam").innerText = "Iniciando câmera traseira...";
+
+      html5QrCode = new Html5Qrcode("cameraArea");
+      const config = { fps: 15, qrbox: { width: 230, height: 230 } };
+
+      html5QrCode.start({ facingMode: "environment" }, config, onScanSucesso)
+        .then(() => {
+          document.getElementById("statusCam").innerText = "Pronto! Aponte para os crachás em sequência.";
+        })
+        .catch(err => {
+          document.getElementById("statusCam").innerText = "Erro ao acessar câmera: " + err;
+          document.getElementById("btnIniciar").style.display = "block";
+        });
+    }
+
+    function onScanSucesso(textoQr) {
+      if (leituraPausada) return;
+      leituraPausada = true;
+
+      var evt = document.getElementById("selEvento").value;
+      var ativ = document.getElementById("selAtividade").value;
+      var fb = document.getElementById("feedback");
+
+      fb.className = "";
+      fb.style.display = "block";
+      fb.innerText = "Registrando: " + textoQr + "...";
+
+      if (navigator.vibrate) navigator.vibrate(120);
+
+      fetch(URL_APPS_SCRIPT, {
+        method: "POST",
+        body: JSON.stringify({ evento: evt, atividade: ativ, discente: textoQr })
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.status === "sucesso") {
+          fb.className = "sucesso";
+          fb.innerText = "✔ " + res.nome + " registrado!";
+        } else if (res.status === "duplicado") {
+          fb.className = "duplicado";
+          fb.innerText = "⚠ " + res.nome + " já estava registrado!";
+        } else {
+          fb.className = "erro";
+          fb.innerText = "Erro ao registrar.";
+        }
+
+        setTimeout(() => {
+          leituraPausada = false;
+          fb.innerText = "Aponte para o próximo QR Code...";
+        }, 1200);
+      })
+      .catch(err => {
+        fb.className = "erro";
+        fb.innerText = "Falha ao gravar presença na planilha.";
+        setTimeout(() => { leituraPausada = false; }, 2000);
+      });
+    }
+  </script>
+
+</body>
+</html>

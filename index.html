@@ -29,15 +29,13 @@
   <div class="card">
     <h2>Acesso da Monitoria</h2>
 
-    <!-- Etapa 1: Autenticação rápida do monitor -->
     <div id="painelLogin">
       <label for="txtPin">PIN de Segurança do Monitor:</label>
-      <input type="password" id="txtPin" placeholder="Introduza o PIN do evento..." inputmode="numeric">
+      <input type="password" id="txtPin" placeholder="Introduza o PIN..." inputmode="numeric">
       <button class="btn-acao" onclick="autenticarMonitor()">Entrar no Sistema</button>
       <div id="erroLogin" style="color: #dc2626; font-size: 13px; font-weight: 600; margin-top: 6px;"></div>
     </div>
 
-    <!-- Etapa 2: Seleção e ativação da câmara (apenas com PIN validado) -->
     <div id="painelMonitor">
       <label for="selEvento">1. Selecione o Evento:</label>
       <select id="selEvento" onchange="atualizarAtividades()"></select>
@@ -54,7 +52,6 @@
   </div>
 
   <script>
-    // Cole aqui o URL da sua implantação Web App do Apps Script
     const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbzCywKHGjyzTiuZBGgH5v_kNJnCE0vSde92Qy0MkcWKo9MQ19ivK0OoI3r5m8R8ojnO/exec";
 
     var pinAutenticado = "";
@@ -65,26 +62,32 @@
     function autenticarMonitor() {
       var pin = document.getElementById("txtPin").value.trim();
       var msgErro = document.getElementById("erroLogin");
-      msgErro.innerText = "A validar PIN...";
+      msgErro.style.color = "#2563eb";
+      msgErro.innerText = "A ligar ao servidor...";
 
-      fetch(URL_APPS_SCRIPT + "?acao=obterAtividades&pin=" + encodeURIComponent(pin))
-        .then(res => res.json())
-        .then(res => {
-          // Identifica se os dados vieram no formato novo ou direto
-          var dadosRecebidos = null;
-          if (res.status === "ok") {
-            dadosRecebidos = res.dados;
-          } else if (!res.erro && !res.status) {
-            dadosRecebidos = res;
+      var urlCompleta = URL_APPS_SCRIPT + "?acao=obterAtividades&pin=" + encodeURIComponent(pin);
+
+      fetch(urlCompleta)
+        .then(function(res) {
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          return res.json();
+        })
+        .then(function(res) {
+          if (res.erro === "pin_invalido") {
+            msgErro.style.color = "#dc2626";
+            msgErro.innerText = "PIN incorreto. Verifique o código em D2.";
+            return;
           }
 
-          if (dadosRecebidos) {
+          var dadosRecebidos = res.dados ? res.dados : res;
+
+          if (dadosRecebidos && typeof dadosRecebidos === "object" && Object.keys(dadosRecebidos).length > 0) {
             pinAutenticado = pin;
             mapaEventos = dadosRecebidos;
-            
+
             document.getElementById("painelLogin").style.display = "none";
             document.getElementById("painelMonitor").style.display = "block";
-            
+
             var selEvento = document.getElementById("selEvento");
             selEvento.innerHTML = '<option value="">Selecione o evento...</option>';
             for (var evt in mapaEventos) {
@@ -94,13 +97,16 @@
               selEvento.appendChild(opt);
             }
           } else {
-            msgErro.innerText = "PIN incorreto. Acesso restrito aos monitores.";
+            msgErro.style.color = "#dc2626";
+            msgErro.innerText = "Nenhuma atividade encontrada na folha.";
           }
         })
-        .catch(err => {
-          msgErro.innerText = "Erro ao contactar o servidor.";
+        .catch(function(err) {
+          msgErro.style.color = "#dc2626";
+          msgErro.innerText = "Falha ao contactar servidor: " + err.message;
         });
     }
+
     function atualizarAtividades() {
       var evtEscolhido = document.getElementById("selEvento").value;
       var selAtiv = document.getElementById("selAtividade");
@@ -136,10 +142,10 @@
       const config = { fps: 15, qrbox: { width: 230, height: 230 } };
 
       html5QrCode.start({ facingMode: "environment" }, config, onScanSucesso)
-        .then(() => {
+        .then(function() {
           document.getElementById("statusCam").innerText = "Pronto! Aponte para os crachás em sequência.";
         })
-        .catch(err => {
+        .catch(function(err) {
           document.getElementById("statusCam").innerText = "Erro ao aceder à câmara: " + err;
           document.getElementById("btnIniciar").style.display = "block";
         });
@@ -163,8 +169,8 @@
         method: "POST",
         body: JSON.stringify({ pin: pinAutenticado, evento: evt, atividade: ativ, discente: textoQr })
       })
-      .then(res => res.json())
-      .then(res => {
+      .then(function(res) { return res.json(); })
+      .then(function(res) {
         if (res.status === "sucesso") {
           fb.className = "sucesso";
           fb.innerText = "✔ " + res.nome + " registado!";
@@ -176,15 +182,15 @@
           fb.innerText = "Erro ao registar presença.";
         }
 
-        setTimeout(() => {
+        setTimeout(function() {
           leituraPausada = false;
           fb.innerText = "Aponte para o próximo QR Code...";
         }, 1200);
       })
-      .catch(err => {
+      .catch(function(err) {
         fb.className = "erro";
         fb.innerText = "Falha de ligação ao gravar.";
-        setTimeout(() => { leituraPausada = false; }, 2000);
+        setTimeout(function() { leituraPausada = false; }, 2000);
       });
     }
   </script>

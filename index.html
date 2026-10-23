@@ -29,13 +29,15 @@
   <div class="card">
     <h2>Acesso da Monitoria</h2>
 
+    <!-- Bloco 1: Autenticação por PIN -->
     <div id="painelLogin">
       <label for="txtPin">PIN de Segurança do Monitor:</label>
-      <input type="password" id="txtPin" placeholder="Introduza o PIN..." inputmode="numeric">
+      <input type="password" id="txtPin" placeholder="Digite o PIN..." inputmode="numeric">
       <button class="btn-acao" onclick="autenticarMonitor()">Entrar no Sistema</button>
-      <div id="erroLogin" style="color: #dc2626; font-size: 13px; font-weight: 600; margin-top: 6px;"></div>
+      <div id="erroLogin" style="font-size: 13px; font-weight: 600; margin-top: 6px;"></div>
     </div>
 
+    <!-- Bloco 2: Seleção e Câmera Contínua -->
     <div id="painelMonitor">
       <label for="selEvento">1. Selecione o Evento:</label>
       <select id="selEvento" onchange="atualizarAtividades()"></select>
@@ -62,8 +64,15 @@
     function autenticarMonitor() {
       var pin = document.getElementById("txtPin").value.trim();
       var msgErro = document.getElementById("erroLogin");
+      
+      if (!pin) {
+        msgErro.style.color = "#dc2626";
+        msgErro.innerText = "Por favor, digite o PIN.";
+        return;
+      }
+
       msgErro.style.color = "#2563eb";
-      msgErro.innerText = "A ligar ao servidor...";
+      msgErro.innerText = "Validando PIN...";
 
       var urlCompleta = URL_APPS_SCRIPT + "?acao=obterAtividades&pin=" + encodeURIComponent(pin);
 
@@ -75,7 +84,7 @@
         .then(function(res) {
           if (res.erro === "pin_invalido") {
             msgErro.style.color = "#dc2626";
-            msgErro.innerText = "PIN incorreto. Verifique o código em D2.";
+            msgErro.innerText = "PIN incorreto. Verifique a célula D2.";
             return;
           }
 
@@ -98,12 +107,12 @@
             }
           } else {
             msgErro.style.color = "#dc2626";
-            msgErro.innerText = "Nenhuma atividade encontrada na folha.";
+            msgErro.innerText = "Nenhuma atividade encontrada na planilha.";
           }
         })
         .catch(function(err) {
           msgErro.style.color = "#dc2626";
-          msgErro.innerText = "Falha ao contactar servidor: " + err.message;
+          msgErro.innerText = "Falha de conexão: " + err.message;
         });
     }
 
@@ -130,13 +139,13 @@
       var ativ = document.getElementById("selAtividade").value;
 
       if (!evt || !ativ) {
-        alert("Selecione o Evento e a Atividade antes de ligar a câmara!");
+        alert("Selecione o Evento e a Atividade antes de ligar a câmera!");
         return;
       }
 
       document.getElementById("btnIniciar").style.display = "none";
       document.getElementById("cameraArea").style.display = "block";
-      document.getElementById("statusCam").innerText = "A iniciar câmara traseira...";
+      document.getElementById("statusCam").innerText = "Iniciando câmera traseira...";
 
       html5QrCode = new Html5Qrcode("cameraArea");
       const config = { fps: 15, qrbox: { width: 230, height: 230 } };
@@ -146,7 +155,7 @@
           document.getElementById("statusCam").innerText = "Pronto! Aponte para os crachás em sequência.";
         })
         .catch(function(err) {
-          document.getElementById("statusCam").innerText = "Erro ao aceder à câmara: " + err;
+          document.getElementById("statusCam").innerText = "Erro ao acessar câmera: " + err;
           document.getElementById("btnIniciar").style.display = "block";
         });
     }
@@ -165,7 +174,6 @@
 
       if (navigator.vibrate) navigator.vibrate(120);
 
-      // Envio via endpoint direto imune a CORS
       var urlEnvio = URL_APPS_SCRIPT + 
         "?acao=gravarPresenca" +
         "&pin=" + encodeURIComponent(pinAutenticado) +
@@ -181,13 +189,12 @@
             fb.innerText = "✔ " + res.nome + " registrado!";
           } else if (res.status === "duplicado") {
             fb.className = "duplicado";
-            fb.innerText = "⚠ " + res.nome + " já estava registrado nesta atividade!";
+            fb.innerText = "⚠ " + res.nome + " já registrado nesta atividade!";
           } else {
             fb.className = "erro";
-            fb.innerText = "Erro ao registrar: " + (res.msg || "Não autorizado");
-      }
+            fb.innerText = "Erro: " + (res.msg || "Não autorizado");
+          }
 
-          // 1,2s para o próximo da fila
           setTimeout(function() {
             leituraPausada = false;
             fb.innerText = "Aponte para o próximo QR Code...";
@@ -195,20 +202,9 @@
         })
         .catch(function(err) {
           fb.className = "erro";
-          fb.innerText = "Falha de conexão: " + err.message;
+          fb.innerText = "Falha de gravação: " + err.message;
           setTimeout(function() { leituraPausada = false; }, 2000);
         });
-    }
-        setTimeout(function() {
-          leituraPausada = false;
-          fb.innerText = "Aponte para o próximo QR Code...";
-        }, 1200);
-      })
-      .catch(function(err) {
-        fb.className = "erro";
-        fb.innerText = "Falha de ligação ao gravar.";
-        setTimeout(function() { leituraPausada = false; }, 2000);
-      });
     }
   </script>
 

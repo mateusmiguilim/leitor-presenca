@@ -161,27 +161,44 @@
 
       fb.className = "";
       fb.style.display = "block";
-      fb.innerText = "A registar: " + textoQr + "...";
+      fb.innerText = "Gravando presença: " + textoQr + "...";
 
       if (navigator.vibrate) navigator.vibrate(120);
 
-      fetch(URL_APPS_SCRIPT, {
-        method: "POST",
-        body: JSON.stringify({ pin: pinAutenticado, evento: evt, atividade: ativ, discente: textoQr })
-      })
-      .then(function(res) { return res.json(); })
-      .then(function(res) {
-        if (res.status === "sucesso") {
-          fb.className = "sucesso";
-          fb.innerText = "✔ " + res.nome + " registado!";
-        } else if (res.status === "duplicado") {
-          fb.className = "duplicado";
-          fb.innerText = "⚠ " + res.nome + " já se encontra registado nesta atividade!";
-        } else {
-          fb.className = "erro";
-          fb.innerText = "Erro ao registar presença.";
-        }
+      // Envio via endpoint direto imune a CORS
+      var urlEnvio = URL_APPS_SCRIPT + 
+        "?acao=gravarPresenca" +
+        "&pin=" + encodeURIComponent(pinAutenticado) +
+        "&evento=" + encodeURIComponent(evt) +
+        "&atividade=" + encodeURIComponent(ativ) +
+        "&discente=" + encodeURIComponent(textoQr);
 
+      fetch(urlEnvio)
+        .then(function(res) { return res.json(); })
+        .then(function(res) {
+          if (res.status === "sucesso") {
+            fb.className = "sucesso";
+            fb.innerText = "✔ " + res.nome + " registrado!";
+          } else if (res.status === "duplicado") {
+            fb.className = "duplicado";
+            fb.innerText = "⚠ " + res.nome + " já estava registrado nesta atividade!";
+          } else {
+            fb.className = "erro";
+            fb.innerText = "Erro ao registrar: " + (res.msg || "Não autorizado");
+          }
+
+          // 1,2s para o próximo da fila
+          setTimeout(function() {
+            leituraPausada = false;
+            fb.innerText = "Aponte para o próximo QR Code...";
+          }, 1200);
+        })
+        .catch(function(err) {
+          fb.className = "erro";
+          fb.innerText = "Falha de conexão: " + err.message;
+          setTimeout(function() { leituraPausada = false; }, 2000);
+        });
+    }
         setTimeout(function() {
           leituraPausada = false;
           fb.innerText = "Aponte para o próximo QR Code...";

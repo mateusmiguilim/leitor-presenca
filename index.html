@@ -70,9 +70,17 @@
       fetch(URL_APPS_SCRIPT + "?acao=obterAtividades&pin=" + encodeURIComponent(pin))
         .then(res => res.json())
         .then(res => {
+          // Identifica se os dados vieram no formato novo ou direto
+          var dadosRecebidos = null;
           if (res.status === "ok") {
+            dadosRecebidos = res.dados;
+          } else if (!res.erro && !res.status) {
+            dadosRecebidos = res;
+          }
+
+          if (dadosRecebidos) {
             pinAutenticado = pin;
-            mapaEventos = res.dados;
+            mapaEventos = dadosRecebidos;
             
             document.getElementById("painelLogin").style.display = "none";
             document.getElementById("painelMonitor").style.display = "block";
@@ -93,7 +101,6 @@
           msgErro.innerText = "Erro ao contactar o servidor.";
         });
     }
-
     function atualizarAtividades() {
       var evtEscolhido = document.getElementById("selEvento").value;
       var selAtiv = document.getElementById("selAtividade");

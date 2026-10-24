@@ -170,36 +170,48 @@
 
       fb.className = "";
       fb.style.display = "block";
-      fb.innerText = "A registar: " + textoQr + "...";
+      fb.innerText = "Registrando: " + textoQr + "...";
 
       if (navigator.vibrate) navigator.vibrate(120);
 
-      // Cria um formulário em memória (100% imune a bloqueios de rede do browser)
-      var dadosForm = new FormData();
-      dadosForm.append("pin", pinAutenticado);
-      dadosForm.append("evento", evt);
-      dadosForm.append("atividade", ativ);
-      dadosForm.append("discente", textoQr);
+      var payload = JSON.stringify({
+        pin: pinAutenticado,
+        evento: evt,
+        atividade: ativ,
+        discente: textoQr
+      });
 
       fetch(URL_APPS_SCRIPT, {
         method: "POST",
-        mode: "no-cors",
-        body: dadosForm
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: payload
       })
-      .then(function() {
-        // Confirmação imediata no ecrã
-        fb.className = "sucesso";
-        fb.innerText = "✔ " + textoQr + " registado!";
+      .then(function(res) {
+        return res.json();
+      })
+      .then(function(res) {
+        if (res.status === "sucesso") {
+          fb.className = "sucesso";
+          fb.innerText = "✔ " + res.nome + " registrado!";
+        } else if (res.status === "duplicado") {
+          fb.className = "duplicado";
+          fb.innerText = "⚠ " + res.nome + " já teve presença registrada nesta atividade!";
+        } else {
+          fb.className = "erro";
+          fb.innerText = "Erro: " + (res.msg || "Não autorizado");
+        }
 
         setTimeout(function() {
           leituraPausada = false;
           fb.innerText = "Aponte para o próximo QR Code...";
-        }, 1200);
+        }, 1500);
       })
       .catch(function(err) {
         fb.className = "erro";
-        fb.innerText = "Falha de ligação: " + err.message;
-        setTimeout(function() { leituraPausada = false; }, 2000);
+        fb.innerText = "Falha ao registrar: " + err.message;
+        setTimeout(function() {
+          leituraPausada = false;
+        }, 2000);
       });
     }
   </script>

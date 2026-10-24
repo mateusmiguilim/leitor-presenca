@@ -24,6 +24,12 @@
     .student-info { font-size: 13px; color: #1e3a8a; font-weight: 600; margin-bottom: 12px; }
     .footer-msg { font-size: 12px; color: #64748b; margin-top: 8px; }
     #statusCarregamento { font-size: 12px; color: #64748b; margin-top: 6px; }
+
+    /* Botão de transição para o Extrato */
+    .btn-extrato { display: inline-block; width: 100%; margin-top: 14px; padding: 11px; background-color: #0b3954; color: white; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; transition: background 0.2s; }
+    .btn-extrato:hover { background-color: #072538; }
+    .link-direto { display: inline-block; margin-top: 16px; font-size: 13px; color: #0b3954; text-decoration: none; font-weight: 600; }
+    .link-direto:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -44,6 +50,13 @@
       <div class="student-name" id="badgeNome"></div>
       <div class="student-info" id="badgeInfo"></div>
       <div class="footer-msg">Apresente este código aos monitores na entrada das atividades.</div>
+      
+      <!-- Botão que envia o aluno direto para o extrato dele -->
+      <a id="btnIrExtrato" class="btn-extrato" href="extrato.html">📊 Ver Minhas Presenças e Horas</a>
+    </div>
+
+    <div>
+      <a class="link-direto" href="extrato.html">Ir direto para o Extrato de Presenças →</a>
     </div>
   </div>
 
@@ -112,6 +125,10 @@
         colorLight : "#ffffff",
         correctLevel : QRCode.CorrectLevel.M
       });
+
+      // Configura o botão do extrato passando o nome do aluno por parâmetro
+      var btnExtrato = document.getElementById("btnIrExtrato");
+      btnExtrato.href = "extrato.html?aluno=" + encodeURIComponent(d.nome);
 
       document.getElementById("badge").style.display = "block";
     }

@@ -4,212 +4,187 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Leitor de Presença - CEFET-MG</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: #f1f5f9; margin: 0; padding: 16px; display: flex; justify-content: center; }
-    .card { background: #ffffff; max-width: 440px; width: 100%; border-radius: 12px; padding: 22px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); text-align: center; }
-    h2 { color: #0b3954; margin: 8px 0 16px 0; font-size: 20px; }
-    label { display: block; text-align: left; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 5px; }
-    input[type="password"], select { width: 100%; padding: 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 15px; margin-bottom: 14px; background-color: #fff; }
-    input[type="password"]:focus, select:focus { border-color: #0b3954; outline: none; }
-    #cameraArea { width: 100%; max-width: 320px; margin: 12px auto; border-radius: 10px; overflow: hidden; background: #000; min-height: 250px; display: none; }
-    .btn-acao { width: 100%; background: #0b3954; color: white; border: none; padding: 14px; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; margin-bottom: 8px; }
-    .btn-acao:active { background: #08283b; }
-    #feedback { margin-top: 16px; padding: 14px; border-radius: 8px; font-size: 14px; font-weight: 600; display: none; }
-    .sucesso { background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
-    .duplicado { background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
-    .erro { background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
-    .status-cam { font-size: 13px; color: #64748b; margin-top: 8px; font-weight: 500; }
-    #painelMonitor { display: none; }
+    body { background-color: #f1f5f9; margin: 0; padding: 14px; display: flex; justify-content: center; }
+    .card { background: #ffffff; max-width: 440px; width: 100%; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); text-align: center; }
+    h2 { color: #0b3954; font-size: 20px; margin: 0 0 16px 0; }
+    .form-group { margin-bottom: 14px; text-align: left; }
+    label { font-size: 13px; font-weight: 600; color: #334155; display: block; margin-bottom: 5px; }
+    input[type="password"], select { width: 100%; padding: 11px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 15px; outline: none; }
+    input[type="password"]:focus, select:focus { border-color: #0b3954; }
+    button { width: 100%; padding: 12px; background-color: #0b3954; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    button:hover { background-color: #072538; }
+    #msgStatusPin { font-size: 13px; margin-top: 10px; font-weight: 600; display: none; }
+    #blocoLeitor { display: none; margin-top: 10px; }
+    #reader { width: 100%; border-radius: 8px; overflow: hidden; margin-top: 14px; background: #000; }
+    #feedback { margin-top: 14px; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 600; display: none; }
+    .sucesso { background-color: #dcfce7; color: #166534; border: 1px solid #86efac; }
+    .duplicado { background-color: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
+    .erro { background-color: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
   </style>
 </head>
 <body>
 
   <div class="card">
-    <h2>Acesso da Monitoria</h2>
+    <h2>Validação da Monitoria</h2>
 
-    <div id="painelLogin">
-      <label for="txtPin">PIN de Segurança do Monitor:</label>
-      <input type="password" id="txtPin" placeholder="Digite o PIN..." inputmode="numeric">
-      <button class="btn-acao" onclick="autenticarMonitor()">Entrar no Sistema</button>
-      <div id="erroLogin" style="font-size: 13px; font-weight: 600; margin-top: 6px;"></div>
+    <!-- BLOCO 1: LOGIN POR PIN -->
+    <div id="blocoLogin">
+      <div class="form-group">
+        <label for="txtPin">PIN de Segurança do Monitor:</label>
+        <input type="password" id="txtPin" placeholder="Digite o PIN" autocomplete="off">
+      </div>
+      <button id="btnEntrar" onclick="validarPin()">Aceder ao Leitor</button>
+      <div id="msgStatusPin"></div>
     </div>
 
-    <div id="painelMonitor">
-      <label for="selEvento">1. Selecione o Evento:</label>
-      <select id="selEvento" onchange="atualizarAtividades()"></select>
+    <!-- BLOCO 2: LEITOR E SELEÇÃO DE ATIVIDADE -->
+    <div id="blocoLeitor">
+      <div class="form-group">
+        <label for="selEvento">Evento:</label>
+        <select id="selEvento" onchange="atualizarAtividades()"></select>
+      </div>
 
-      <label for="selAtividade">2. Selecione a Atividade:</label>
-      <select id="selAtividade" disabled></select>
+      <div class="form-group">
+        <label for="selAtividade">Oficina / Atividade:</label>
+        <select id="selAtividade"></select>
+      </div>
 
-      <button id="btnIniciar" class="btn-acao" onclick="iniciarLeitor()">Ligar Câmera Contínua</button>
-      <div id="statusCam" class="status-cam"></div>
-
-      <div id="cameraArea"></div>
+      <div id="reader"></div>
       <div id="feedback"></div>
     </div>
   </div>
 
   <script>
-    const URL_APPS_SCRIPT = "const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbwCuyOlGVYnMU65_qo9jjl_bxW_VAQP6WwNje8t-V3JqCr4xOq8fKt2YTI6dmcfv7sF/exec";";
+    const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbwCuyOlGVYnMU65_qo9jjl_bxW_VAQP6WwNje8t-V3JqCr4xOq8fKt2YTI6dmcfv7sF/exec";
 
-    var pinAutenticado = "";
-    var mapaEventos = {};
-    var html5QrCode = null;
-    var leituraPausada = false;
+    var mapaAtividades = {};
+    var html5QrcodeScanner = null;
+    var pinSalvo = "";
+    var lendoAgora = false;
 
-    function autenticarMonitor() {
+    function validarPin() {
       var pin = document.getElementById("txtPin").value.trim();
-      var msgErro = document.getElementById("erroLogin");
-      
+      var msg = document.getElementById("msgStatusPin");
+      var btn = document.getElementById("btnEntrar");
+
       if (!pin) {
-        msgErro.style.color = "#dc2626";
-        msgErro.innerText = "Por favor, digite o PIN.";
+        msg.style.display = "block";
+        msg.style.color = "#dc2626";
+        msg.innerText = "Por favor, digite o PIN.";
         return;
       }
 
-      msgErro.style.color = "#2563eb";
-      msgErro.innerText = "Validando PIN...";
+      msg.style.display = "block";
+      msg.style.color = "#475569";
+      msg.innerText = "A verificar PIN...";
+      btn.disabled = true;
 
-      var urlCompleta = URL_APPS_SCRIPT + "?acao=obterAtividades&pin=" + encodeURIComponent(pin);
-
-      fetch(urlCompleta)
+      fetch(URL_APPS_SCRIPT + "?acao=obterAtividades&pin=" + encodeURIComponent(pin))
         .then(function(res) {
           if (!res.ok) throw new Error("HTTP " + res.status);
           return res.json();
         })
-        .then(function(res) {
-          if (res.erro === "pin_invalido") {
-            msgErro.style.color = "#dc2626";
-            msgErro.innerText = "PIN incorreto. Verifique a célula D2.";
-            return;
-          }
-
-          var dadosRecebidos = res.dados ? res.dados : res;
-
-          if (dadosRecebidos && typeof dadosRecebidos === "object" && Object.keys(dadosRecebidos).length > 0) {
-            pinAutenticado = pin;
-            mapaEventos = dadosRecebidos;
-
-            document.getElementById("painelLogin").style.display = "none";
-            document.getElementById("painelMonitor").style.display = "block";
-
-            var selEvento = document.getElementById("selEvento");
-            selEvento.innerHTML = '<option value="">Selecione o evento...</option>';
-            for (var evt in mapaEventos) {
-              var opt = document.createElement("option");
-              opt.value = evt;
-              opt.innerText = evt;
-              selEvento.appendChild(opt);
-            }
+        .then(function(dados) {
+          btn.disabled = false;
+          if (dados && dados.status === "ok") {
+            pinSalvo = pin;
+            mapaAtividades = dados.dados;
+            configurarSeletores();
+            document.getElementById("blocoLogin").style.display = "none";
+            document.getElementById("blocoLeitor").style.display = "block";
+            iniciarScanner();
           } else {
-            msgErro.style.color = "#dc2626";
-            msgErro.innerText = "Nenhuma atividade encontrada na planilha.";
+            msg.style.color = "#dc2626";
+            msg.innerText = "PIN incorreto. Tente novamente.";
           }
         })
         .catch(function(err) {
-          msgErro.style.color = "#dc2626";
-          msgErro.innerText = "Falha de conexão: " + err.message;
+          btn.disabled = false;
+          msg.style.color = "#dc2626";
+          msg.innerText = "Erro ao contactar o servidor. Tente de novo.";
         });
+    }
+
+    function configurarSeletores() {
+      var selEv = document.getElementById("selEvento");
+      selEv.innerHTML = "";
+      for (var ev in mapaAtividades) {
+        var opt = document.createElement("option");
+        opt.value = ev;
+        opt.innerText = ev;
+        selEv.appendChild(opt);
+      }
+      atualizarAtividades();
     }
 
     function atualizarAtividades() {
-      var evtEscolhido = document.getElementById("selEvento").value;
-      var selAtiv = document.getElementById("selAtividade");
-      selAtiv.innerHTML = '<option value="">Selecione a atividade...</option>';
-
-      if (evtEscolhido && mapaEventos[evtEscolhido]) {
-        mapaEventos[evtEscolhido].forEach(function(ativ) {
-          var opt = document.createElement("option");
-          opt.value = ativ;
-          opt.innerText = ativ;
-          selAtiv.appendChild(opt);
-        });
-        selAtiv.disabled = false;
-      } else {
-        selAtiv.disabled = true;
-      }
+      var selEv = document.getElementById("selEvento").value;
+      var selAt = document.getElementById("selAtividade");
+      selAt.innerHTML = "";
+      var lista = mapaAtividades[selEv] || [];
+      lista.forEach(function(at) {
+        var opt = document.createElement("option");
+        opt.value = at;
+        opt.innerText = at;
+        selAt.appendChild(opt);
+      });
     }
 
-    function iniciarLeitor() {
-      var evt = document.getElementById("selEvento").value;
-      var ativ = document.getElementById("selAtividade").value;
-
-      if (!evt || !ativ) {
-        alert("Selecione o Evento e a Atividade antes de ligar a câmera!");
-        return;
-      }
-
-      document.getElementById("btnIniciar").style.display = "none";
-      document.getElementById("cameraArea").style.display = "block";
-      document.getElementById("statusCam").innerText = "Iniciando câmera traseira...";
-
-      html5QrCode = new Html5Qrcode("cameraArea");
-      const config = { fps: 15, qrbox: { width: 230, height: 230 } };
-
-      html5QrCode.start({ facingMode: "environment" }, config, onScanSucesso)
-        .then(function() {
-          document.getElementById("statusCam").innerText = "Pronto! Aponte para os crachás em sequência.";
-        })
-        .catch(function(err) {
-          document.getElementById("statusCam").innerText = "Erro ao acessar câmera: " + err;
-          document.getElementById("btnIniciar").style.display = "block";
-        });
+    function iniciarScanner() {
+      html5QrcodeScanner = new Html5Qrcode("reader");
+      html5QrcodeScanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 220, height: 220 } },
+        onScanSuccess
+      ).catch(function(err) {
+        exibirFeedback("erro", "Erro ao aceder à câmara: " + err);
+      });
     }
 
-    function onScanSucesso(textoQr) {
-      if (leituraPausada) return;
-      leituraPausada = true;
+    function onScanSuccess(decodedText) {
+      if (lendoAgora) return;
+      lendoAgora = true;
 
-      var evt = document.getElementById("selEvento").value;
-      var ativ = document.getElementById("selAtividade").value;
-      var fb = document.getElementById("feedback");
+      var evento = document.getElementById("selEvento").value;
+      var atividade = document.getElementById("selAtividade").value;
+      var nomeDiscente = decodedText.trim();
 
-      fb.className = "";
-      fb.style.display = "block";
-      fb.innerText = "Registrando: " + textoQr + "...";
-
-      if (navigator.vibrate) navigator.vibrate(120);
+      exibirFeedback("duplicado", "A registar presença de: " + nomeDiscente + "...");
 
       var urlEnvio = URL_APPS_SCRIPT + 
         "?acao=gravarPresenca" +
-        "&pin=" + encodeURIComponent(pinAutenticado) +
-        "&evento=" + encodeURIComponent(evt) +
-        "&atividade=" + encodeURIComponent(ativ) +
-        "&discente=" + encodeURIComponent(textoQr);
+        "&pin=" + encodeURIComponent(pinSalvo) +
+        "&evento=" + encodeURIComponent(evento) +
+        "&atividade=" + encodeURIComponent(atividade) +
+        "&discente=" + encodeURIComponent(nomeDiscente);
 
       fetch(urlEnvio)
-        .then(function(res) {
-          if (!res.ok) throw new Error("HTTP " + res.status);
-          return res.json();
-        })
+        .then(function(res) { return res.json(); })
         .then(function(res) {
           if (res.status === "sucesso") {
-            fb.className = "sucesso";
-            fb.innerText = "✔ " + res.nome + " registrado!";
+            exibirFeedback("sucesso", "✔ Presença registada: " + res.nome);
           } else if (res.status === "duplicado") {
-            fb.className = "duplicado";
-            fb.innerText = "⚠ " + res.nome + " já registrado nesta atividade!";
+            exibirFeedback("duplicado", "⚠ Já estava registado: " + res.nome);
           } else {
-            fb.className = "erro";
-            fb.innerText = "Aviso: " + (res.msg || "Não autorizado");
+            exibirFeedback("erro", "Erro: " + (res.msg || "Falha no registo"));
           }
-
-          setTimeout(function() {
-            leituraPausada = false;
-            fb.innerText = "Aponte para o próximo QR Code...";
-          }, 1500);
+          setTimeout(function() { lendoAgora = false; }, 2500);
         })
         .catch(function(err) {
-          fb.className = "erro";
-          fb.innerText = "Falha ao gravar: " + err.message;
-          setTimeout(function() {
-            leituraPausada = false;
-          }, 2000);
+          exibirFeedback("erro", "Erro de ligação ao gravar.");
+          setTimeout(function() { lendoAgora = false; }, 2500);
         });
     }
-  </script>
 
+    function exibirFeedback(classe, texto) {
+      var f = document.getElementById("feedback");
+      f.className = classe;
+      f.innerText = texto;
+      f.style.display = "block";
+    }
+  </script>
 </body>
 </html>

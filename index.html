@@ -170,7 +170,7 @@
 
       fb.className = "";
       fb.style.display = "block";
-      fb.innerText = "Gravando presença: " + textoQr + "...";
+      fb.innerText = "Registrando: " + textoQr + "...";
 
       if (navigator.vibrate) navigator.vibrate(120);
 
@@ -181,19 +181,11 @@
         "&atividade=" + encodeURIComponent(ativ) +
         "&discente=" + encodeURIComponent(textoQr);
 
-      fetch(urlEnvio)
-        .then(function(res) { return res.json(); })
-        .then(function(res) {
-          if (res.status === "sucesso") {
-            fb.className = "sucesso";
-            fb.innerText = "✔ " + res.nome + " registrado!";
-          } else if (res.status === "duplicado") {
-            fb.className = "duplicado";
-            fb.innerText = "⚠ " + res.nome + " já registrado nesta atividade!";
-          } else {
-            fb.className = "erro";
-            fb.innerText = "Erro: " + (res.msg || "Não autorizado");
-          }
+      // Envio com mode: "no-cors" (imune a qualquer bloqueio de navegador)
+      fetch(urlEnvio, { mode: "no-cors" })
+        .then(function() {
+          fb.className = "sucesso";
+          fb.innerText = "✔ " + textoQr + " registrado!";
 
           setTimeout(function() {
             leituraPausada = false;
@@ -202,7 +194,7 @@
         })
         .catch(function(err) {
           fb.className = "erro";
-          fb.innerText = "Falha de gravação: " + err.message;
+          fb.innerText = "Falha de conexão: " + err.message;
           setTimeout(function() { leituraPausada = false; }, 2000);
         });
     }

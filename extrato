@@ -82,34 +82,48 @@
 
     var bancoDiscentes = [];
 
+    function normalizar(str) {
+      if (!str) return "";
+      return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    }
+
     window.onload = function() {
+      // 1. Verifica de imediato se veio um nome pela URL
+      var params = new URLSearchParams(window.location.search);
+      var alunoUrl = params.get("aluno");
+
+      if (alunoUrl) {
+        var nomeFormatado = decodeURIComponent(alunoUrl).trim();
+        document.getElementById("txtNome").value = nomeFormatado;
+        document.getElementById("lblNome").innerText = nomeFormatado;
+        document.getElementById("resultadoArea").style.display = "block";
+        consultarExtrato(nomeFormatado);
+      }
+
+      // 2. Carrega a lista em segundo plano para o autocomplete e info do curso
       fetch(URL_APPS_SCRIPT + "?acao=obterAlunos")
         .then(function(res) { return res.json(); })
         .then(function(dados) {
           bancoDiscentes = dados;
           document.getElementById("statusCarregamento").style.display = "none";
 
-          // Se veio redirecionado da credencial com o nome na URL
-          var urlParams = new URLSearchParams(window.location.search);
-          var alunoParam = urlParams.get("aluno");
-          if (alunoParam) {
-            var encontrado = bancoDiscentes.find(function(d) {
-              return normalizar(d.nome) === normalizar(alunoParam);
-            });
-            if (encontrado) {
-              selecionarDiscente(encontrado);
+          // Se veio aluno pela URL, atualiza o curso/série dele assim que a lista chegar
+          if (alunoUrl) {
+            var termo = normalizar(alunoUrl);
+            var enc = bancoDiscentes.find(function(d) { return normalizar(d.nome) === termo; });
+            if (enc) {
+              var infoTxt = "";
+              if (enc.curso && enc.serie) infoTxt = enc.curso + " — " + enc.serie;
+              else if (enc.curso) infoTxt = enc.curso;
+              else if (enc.serie) infoTxt = enc.serie;
+              document.getElementById("lblInfo").innerText = infoTxt;
             }
           }
         })
         .catch(function(err) {
-          document.getElementById("statusCarregamento").style.color = "#dc2626";
-          document.getElementById("statusCarregamento").innerText = "Erro ao carregar lista de alunos.";
+          document.getElementById("statusCarregamento").style.display = "none";
         });
     };
-
-    function normalizar(str) {
-      return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-    }
 
     function filtrarNomes() {
       var input = document.getElementById("txtNome").value;
@@ -172,12 +186,22 @@
 
           registros.forEach(function(r) {
             contagem[r.evento] = (contagem[r.evento] || 0) + 1;
+            
+            // Tratamento amigável da data caso venha em formato ISO
+            var dataFormatada = r.dataHora;
+            try {
+              if (dataFormatada.indexOf("T") > -1) {
+                var d = new Date(dataFormatada);
+                dataFormatada = d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' });
+              }
+            } catch(e) {}
+
             var item = document.createElement("div");
             item.className = "item-presenca";
             item.innerHTML = 
               '<div class="ev-tag">' + r.evento + '</div>' +
               '<div class="at-nome">' + r.atividade + '</div>' +
-              '<div class="dt-hora">' + r.dataHora + '</div>';
+              '<div class="dt-hora">' + dataFormatada + '</div>';
             timeline.appendChild(item);
           });
 

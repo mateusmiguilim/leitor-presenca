@@ -29,7 +29,6 @@
   <div class="card">
     <h2>Acesso da Monitoria</h2>
 
-    <!-- Bloco 1: Autenticação por PIN -->
     <div id="painelLogin">
       <label for="txtPin">PIN de Segurança do Monitor:</label>
       <input type="password" id="txtPin" placeholder="Digite o PIN..." inputmode="numeric">
@@ -37,7 +36,6 @@
       <div id="erroLogin" style="font-size: 13px; font-weight: 600; margin-top: 6px;"></div>
     </div>
 
-    <!-- Bloco 2: Seleção e Câmera Contínua -->
     <div id="painelMonitor">
       <label for="selEvento">1. Selecione o Evento:</label>
       <select id="selEvento" onchange="atualizarAtividades()"></select>
@@ -170,7 +168,7 @@
 
       fb.className = "";
       fb.style.display = "block";
-      fb.innerText = "A verificar: " + textoQr + "...";
+      fb.innerText = "Registrando: " + textoQr + "...";
 
       if (navigator.vibrate) navigator.vibrate(120);
 
@@ -189,13 +187,13 @@
         .then(function(res) {
           if (res.status === "sucesso") {
             fb.className = "sucesso";
-            fb.innerText = "✔ " + res.nome + " registado com sucesso!";
+            fb.innerText = "✔ " + res.nome + " registrado!";
           } else if (res.status === "duplicado") {
             fb.className = "duplicado";
-            fb.innerText = "⚠ " + res.nome + " já se encontra registado nesta atividade!";
+            fb.innerText = "⚠ " + res.nome + " já registrado nesta atividade!";
           } else {
             fb.className = "erro";
-            fb.innerText = "Aviso: " + (res.msg || "Erro ao registar");
+            fb.innerText = "Aviso: " + (res.msg || "Não autorizado");
           }
 
           setTimeout(function() {
@@ -205,7 +203,7 @@
         })
         .catch(function(err) {
           fb.className = "erro";
-          fb.innerText = "Falha de ligação: " + err.message;
+          fb.innerText = "Falha ao gravar: " + err.message;
           setTimeout(function() {
             leituraPausada = false;
           }, 2000);

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Extrato de Participação - CEFET-MG</title>
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #f1f5f9; margin: 0; padding: 16px; display: flex; justify-content: center; }
+    .card { background: #ffffff; max-width: 460px; width: 100%; border-radius: 12px; padding: 22px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); text-align: center; }
+    h2 { color: #0b3954; font-size: 20px; margin: 6px 0 6px 0; }
+    p.sub { font-size: 13px; color: #64748b; margin: 0 0 18px 0; }
+    .search-box { position: relative; margin-bottom: 18px; text-align: left; }
+    label { font-size: 13px; font-weight: 600; color: #334155; display: block; margin-bottom: 6px; }
+    input[type="text"] { width: 100%; padding: 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 15px; outline: none; }
+    input[type="text"]:focus { border-color: #0b3954; }
+    .autocomplete-items { position: absolute; border: 1px solid #cbd5e1; border-top: none; z-index: 99; top: 100%; left: 0; right: 0; background-color: #fff; max-height: 220px; overflow-y: auto; border-radius: 0 0 8px 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .autocomplete-items div { padding: 12px; cursor: pointer; font-size: 14px; text-align: left; border-bottom: 1px solid #f1f5f9; }
+    .autocomplete-items div:hover { background-color: #f8fafc; color: #0b3954; font-weight: 600; }
+    #statusCarregamento { font-size: 12px; color: #64748b; margin-top: 6px; }
+
+    #resultadoArea { display: none; margin-top: 20px; text-align: left; }
+    .header-discente { background: #0b3954; color: white; padding: 12px 14px; border-radius: 8px; margin-bottom: 14px; }
+    .nome-discente { font-size: 16px; font-weight: bold; }
+    .info-discente { font-size: 12px; opacity: 0.9; margin-top: 2px; }
+
+    .resumo-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .resumo-titulo { font-size: 14px; font-weight: bold; color: #334155; text-transform: uppercase; letter-spacing: 0.5px; }
+    .total-badge { background: #10b981; color: white; font-size: 12px; font-weight: bold; padding: 4px 10px; border-radius: 20px; }
+
+    .grid-eventos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+    .card-evento { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; text-align: center; }
+    .card-evento .num { font-size: 20px; font-weight: bold; color: #0b3954; }
+    .card-evento .lbl { font-size: 11px; color: #64748b; font-weight: 600; margin-top: 2px; word-break: break-word; }
+
+    .timeline { max-height: 280px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; }
+    .item-presenca { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+    .item-presenca:last-child { border-bottom: none; }
+    .item-presenca .ev-tag { font-weight: bold; color: #0b3954; font-size: 11px; text-transform: uppercase; }
+    .item-presenca .at-nome { color: #1e293b; font-weight: 600; margin: 3px 0; }
+    .item-presenca .dt-hora { font-size: 11px; color: #94a3b8; }
+    .vazio-msg { padding: 16px; text-align: center; color: #64748b; font-size: 13px; }
+    
+    .link-voltar { display: inline-block; margin-top: 18px; font-size: 13px; color: #0b3954; text-decoration: none; font-weight: 600; }
+    .link-voltar:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h2>Extrato de Presenças</h2>
+    <p class="sub">Acompanhe suas participações nas atividades</p>
+
+    <div class="search-box">
+      <label for="txtNome">Digite seu nome completo:</label>
+      <input type="text" id="txtNome" placeholder="Comece a digitar..." oninput="filtrarNomes()" autocomplete="off">
+      <div id="statusCarregamento">Carregando lista...</div>
+      <div id="listaSugestoes" class="autocomplete-items"></div>
+    </div>
+
+    <div id="resultadoArea">
+      <div class="header-discente">
+        <div class="nome-discente" id="lblNome"></div>
+        <div class="info-discente" id="lblInfo"></div>
+      </div>
+
+      <div class="resumo-header">
+        <span class="resumo-titulo">Resumo Geral</span>
+        <span class="total-badge" id="lblTotal">0 Atividades</span>
+      </div>
+
+      <div class="grid-eventos" id="gridEventos"></div>
+
+      <div class="timeline" id="timelinePresencas"></div>
+    </div>
+
+    <a class="link-voltar" href="credencial.html">← Voltar para a Consulta de Credencial</a>
+  </div>
+
+  <script>
+    const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbwCuyOlGVYnMU65_qo9jjl_bxW_VAQP6WwNje8t-V3JqCr4xOq8fKt2YTI6dmcfv7sF/exec";
+
+    var bancoDiscentes = [];
+
+    window.onload = function() {
+      fetch(URL_APPS_SCRIPT + "?acao=obterAlunos")
+        .then(function(res) { return res.json(); })
+        .then(function(dados) {
+          bancoDiscentes = dados;
+          document.getElementById("statusCarregamento").style.display = "none";
+        })
+        .catch(function(err) {
+          document.getElementById("statusCarregamento").style.color = "#dc2626";
+          document.getElementById("statusCarregamento").innerText = "Erro ao carregar lista de alunos.";
+        });
+    };
+
+    function normalizar(str) {
+      return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    }
+
+    function filtrarNomes() {
+      var input = document.getElementById("txtNome").value;
+      var lista = document.getElementById("listaSugestoes");
+      lista.innerHTML = "";
+      if (!input || input.length < 2) return;
+
+      var termo = normalizar(input);
+      var filtrados = bancoDiscentes.filter(function(d) {
+        return normalizar(d.nome).indexOf(termo) > -1;
+      });
+
+      filtrados.slice(0, 8).forEach(function(d) {
+        var item = document.createElement("div");
+        item.innerText = d.nome;
+        item.onclick = function() {
+          selecionarDiscente(d);
+        };
+        lista.appendChild(item);
+      });
+    }
+
+    function selecionarDiscente(d) {
+      document.getElementById("txtNome").value = d.nome;
+      document.getElementById("listaSugestoes").innerHTML = "";
+
+      document.getElementById("lblNome").innerText = d.nome;
+      var infoTxt = "";
+      if (d.curso && d.serie) infoTxt = d.curso + " — " + d.serie;
+      else if (d.curso) infoTxt = d.curso;
+      else if (d.serie) infoTxt = d.serie;
+      document.getElementById("lblInfo").innerText = infoTxt;
+
+      document.getElementById("resultadoArea").style.display = "block";
+      consultarExtrato(d.nome);
+    }
+
+    function consultarExtrato(nome) {
+      var timeline = document.getElementById("timelinePresencas");
+      var grid = document.getElementById("gridEventos");
+      var lblTotal = document.getElementById("lblTotal");
+
+      timeline.innerHTML = '<div class="vazio-msg">Buscando participações...</div>';
+      grid.innerHTML = "";
+      lblTotal.innerText = "Consultando...";
+
+      fetch(URL_APPS_SCRIPT + "?acao=obterExtrato&discente=" + encodeURIComponent(nome))
+        .then(function(res) { return res.json(); })
+        .then(function(registros) {
+          var total = registros.length;
+          lblTotal.innerText = total + (total === 1 ? " Atividade" : " Atividades");
+
+          if (total === 0) {
+            timeline.innerHTML = '<div class="vazio-msg">Nenhuma presença registrada para este estudante até o momento.</div>';
+            return;
+          }
+
+          var contagem = {};
+          timeline.innerHTML = "";
+
+          registros.forEach(function(r) {
+            contagem[r.evento] = (contagem[r.evento] || 0) + 1;
+            var item = document.createElement("div");
+            item.className = "item-presenca";
+            item.innerHTML = 
+              '<div class="ev-tag">' + r.evento + '</div>' +
+              '<div class="at-nome">' + r.atividade + '</div>' +
+              '<div class="dt-hora">' + r.dataHora + '</div>';
+            timeline.appendChild(item);
+          });
+
+          for (var ev in contagem) {
+            var cardEv = document.createElement("div");
+            cardEv.className = "card-evento";
+            cardEv.innerHTML = '<div class="num">' + contagem[ev] + '</div><div class="lbl">' + ev + '</div>';
+            grid.appendChild(cardEv);
+          }
+        })
+        .catch(function(err) {
+          timeline.innerHTML = '<div class="vazio-msg" style="color: #dc2626;">Erro ao consultar presenças. Tente recarregar.</div>';
+          lblTotal.innerText = "Indisponível";
+        });
+    }
+  </script>
+</body>
+</html>

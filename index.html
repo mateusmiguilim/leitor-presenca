@@ -170,33 +170,37 @@
 
       fb.className = "";
       fb.style.display = "block";
-      fb.innerText = "Registrando: " + textoQr + "...";
+      fb.innerText = "A registar: " + textoQr + "...";
 
       if (navigator.vibrate) navigator.vibrate(120);
 
-      var urlEnvio = URL_APPS_SCRIPT + 
-        "?acao=gravarPresenca" +
-        "&pin=" + encodeURIComponent(pinAutenticado) +
-        "&evento=" + encodeURIComponent(evt) +
-        "&atividade=" + encodeURIComponent(ativ) +
-        "&discente=" + encodeURIComponent(textoQr);
+      // Cria um formulário em memória (100% imune a bloqueios de rede do browser)
+      var dadosForm = new FormData();
+      dadosForm.append("pin", pinAutenticado);
+      dadosForm.append("evento", evt);
+      dadosForm.append("atividade", ativ);
+      dadosForm.append("discente", textoQr);
 
-      // Envio com mode: "no-cors" (imune a qualquer bloqueio de navegador)
-      fetch(urlEnvio, { mode: "no-cors" })
-        .then(function() {
-          fb.className = "sucesso";
-          fb.innerText = "✔ " + textoQr + " registrado!";
+      fetch(URL_APPS_SCRIPT, {
+        method: "POST",
+        mode: "no-cors",
+        body: dadosForm
+      })
+      .then(function() {
+        // Confirmação imediata no ecrã
+        fb.className = "sucesso";
+        fb.innerText = "✔ " + textoQr + " registado!";
 
-          setTimeout(function() {
-            leituraPausada = false;
-            fb.innerText = "Aponte para o próximo QR Code...";
-          }, 1200);
-        })
-        .catch(function(err) {
-          fb.className = "erro";
-          fb.innerText = "Falha de conexão: " + err.message;
-          setTimeout(function() { leituraPausada = false; }, 2000);
-        });
+        setTimeout(function() {
+          leituraPausada = false;
+          fb.innerText = "Aponte para o próximo QR Code...";
+        }, 1200);
+      })
+      .catch(function(err) {
+        fb.className = "erro";
+        fb.innerText = "Falha de ligação: " + err.message;
+        setTimeout(function() { leituraPausada = false; }, 2000);
+      });
     }
   </script>
 

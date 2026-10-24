@@ -88,6 +88,18 @@
         .then(function(dados) {
           bancoDiscentes = dados;
           document.getElementById("statusCarregamento").style.display = "none";
+
+          // Se veio redirecionado da credencial com o nome na URL
+          var urlParams = new URLSearchParams(window.location.search);
+          var alunoParam = urlParams.get("aluno");
+          if (alunoParam) {
+            var encontrado = bancoDiscentes.find(function(d) {
+              return normalizar(d.nome) === normalizar(alunoParam);
+            });
+            if (encontrado) {
+              selecionarDiscente(encontrado);
+            }
+          }
         })
         .catch(function(err) {
           document.getElementById("statusCarregamento").style.color = "#dc2626";

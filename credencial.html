@@ -93,24 +93,34 @@
     var qrcodeObj = null;
 
     window.onload = function() {
-      fetch(URL_APPS_SCRIPT + "?acao=obterAlunos")
-        .then(function(res) {
-          if (!res.ok) throw new Error("HTTP " + res.status);
-          return res.json();
-        })
-        .then(function(dados) {
-          bancoDiscentes = dados;
-          document.getElementById("statusCarregamento").innerText = "Lista atualizada. Pode pesquisar!";
-          setTimeout(function() {
-            document.getElementById("statusCarregamento").style.display = "none";
-          }, 1500);
-        })
-        .catch(function(err) {
-          document.getElementById("statusCarregamento").style.color = "#dc2626";
-          document.getElementById("statusCarregamento").innerText = "Erro ao carregar dados da planilha.";
-        });
+      var statusEl = document.getElementById("statusCarregamento");
+      
+      fetch(URL_APPS_SCRIPT + "?acao=obterAlunos", {
+        method: "GET",
+        mode: "cors",
+        redirect: "follow"
+      })
+      .then(function(res) {
+        if (!res.ok) throw new Error("Erro na rede: HTTP " + res.status);
+        return res.json();
+      })
+      .then(function(dados) {
+        if (!Array.isArray(dados)) {
+          throw new Error("Formato de resposta inválido");
+        }
+        bancoDiscentes = dados;
+        statusEl.style.color = "#16a34a";
+        statusEl.innerText = "Lista atualizada com sucesso!";
+        setTimeout(function() {
+          statusEl.style.display = "none";
+        }, 1200);
+      })
+      .catch(function(err) {
+        console.error("Falha ao carregar alunos:", err);
+        statusEl.style.color = "#dc2626";
+        statusEl.innerText = "Erro ao carregar dados. Recarregue a página.";
+      });
     };
-
     function normalizar(str) {
       return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
     }

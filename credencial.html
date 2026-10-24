@@ -126,9 +126,11 @@
         correctLevel : QRCode.CorrectLevel.M
       });
 
-      // Configura o botão do extrato passando o nome do aluno por parâmetro
-      var btnExtrato = document.getElementById("btnIrExtrato");
-      btnExtrato.href = "extrato.html?aluno=" + encodeURIComponent(d.nome);
+      // Atualiza o link do botão com o nome do aluno selecionado
+      var linkExtrato = document.getElementById("btnIrExtrato");
+      if (linkExtrato) {
+        linkExtrato.href = "extrato.html?aluno=" + encodeURIComponent(d.nome);
+      }
 
       document.getElementById("badge").style.display = "block";
     }

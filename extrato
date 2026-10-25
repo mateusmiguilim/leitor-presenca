@@ -87,27 +87,24 @@
       return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
     }
 
-    window.onload = function() {
-      // 1. Verifica de imediato se veio um nome pela URL
+    function inicializarExtrato() {
       var params = new URLSearchParams(window.location.search);
       var alunoUrl = params.get("aluno");
 
       if (alunoUrl) {
-        var nomeFormatado = decodeURIComponent(alunoUrl).trim();
+        var nomeFormatado = alunoUrl.trim();
         document.getElementById("txtNome").value = nomeFormatado;
         document.getElementById("lblNome").innerText = nomeFormatado;
         document.getElementById("resultadoArea").style.display = "block";
         consultarExtrato(nomeFormatado);
       }
 
-      // 2. Carrega a lista em segundo plano para o autocomplete e info do curso
       fetch(URL_APPS_SCRIPT + "?acao=obterAlunos")
         .then(function(res) { return res.json(); })
         .then(function(dados) {
           bancoDiscentes = dados;
           document.getElementById("statusCarregamento").style.display = "none";
 
-          // Se veio aluno pela URL, atualiza o curso/série dele assim que a lista chegar
           if (alunoUrl) {
             var termo = normalizar(alunoUrl);
             var enc = bancoDiscentes.find(function(d) { return normalizar(d.nome) === termo; });
@@ -123,7 +120,13 @@
         .catch(function(err) {
           document.getElementById("statusCarregamento").style.display = "none";
         });
-    };
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", inicializarExtrato);
+    } else {
+      inicializarExtrato();
+    }
 
     function filtrarNomes() {
       var input = document.getElementById("txtNome").value;
@@ -187,10 +190,9 @@
           registros.forEach(function(r) {
             contagem[r.evento] = (contagem[r.evento] || 0) + 1;
             
-            // Tratamento amigável da data caso venha em formato ISO
             var dataFormatada = r.dataHora;
             try {
-              if (dataFormatada.indexOf("T") > -1) {
+              if (typeof dataFormatada === "string" && dataFormatada.indexOf("T") > -1) {
                 var d = new Date(dataFormatada);
                 dataFormatada = d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' });
               }

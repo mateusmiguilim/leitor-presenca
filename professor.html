@@ -58,7 +58,12 @@
     .badge-total { background: #10b981; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; }
 
     .card-aluno-detalhe { border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; background: #fff; margin-top: 14px; display: none; }
-    .header-aluno { background: #0b3954; color: white; padding: 12px; border-radius: 6px; margin-bottom: 14px; }
+    .header-aluno { background: #0b3954; color: white; padding: 12px; border-radius: 6px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
+    
+    /* Avisos e Feedbacks */
+    .alerta-busca { padding: 14px; border-radius: 8px; font-size: 13px; margin-top: 14px; display: none; }
+    .alerta-nao-encontrado { background-color: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+    .alerta-sem-presenca { background-color: #fefce8; border: 1px solid #fef08a; color: #854d0e; text-align: center; padding: 14px; font-weight: 600; border-radius: 6px; margin-top: 10px; }
   </style>
 </head>
 <body>
@@ -112,25 +117,43 @@
       <section id="view3" class="view-section">
         <div class="filtro-box">
           <label for="txtBuscaAluno">Buscar Aluno:</label>
-          <input type="text" id="txtBuscaAluno" placeholder="Comece a digitar o nome..." oninput="filtrarAlunosInput()">
+          <input type="text" id="txtBuscaAluno" placeholder="Digite o nome completo ou parte dele..." oninput="filtrarAlunosInput()">
         </div>
+        
+        <!-- Mensagem de Aluno Não Encontrado no Cadastro -->
+        <div id="alertaNaoEncontrado" class="alerta-busca alerta-nao-encontrado">
+          ⚠️ Nenhum estudante matriculado encontrado com esse nome.
+        </div>
+
+        <!-- Detalhes do Aluno -->
         <div id="cardAlunoDetalhe" class="card-aluno-detalhe">
           <div class="header-aluno">
-            <div id="detalheNome" style="font-size: 16px; font-weight: bold;"></div>
-            <div id="detalheTurma" style="font-size: 13px; opacity: 0.9;"></div>
+            <div>
+              <div id="detalheNome" style="font-size: 16px; font-weight: bold;"></div>
+              <div id="detalheTurma" style="font-size: 13px; opacity: 0.9; margin-top: 2px;"></div>
+            </div>
+            <div id="detalheTotalBadge" class="badge-total" style="font-size: 13px; padding: 4px 12px;"></div>
           </div>
-          <div style="font-weight: bold; margin-bottom: 8px; color: #334155;">Registros de Entrada:</div>
-          <div class="tabela-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Data / Hora</th>
-                  <th>Evento</th>
-                  <th>Oficina / Atividade</th>
-                </tr>
-              </thead>
-              <tbody id="tbodyAlunoHistorico"></tbody>
-            </table>
+          
+          <div id="areaTabelaAluno">
+            <div style="font-weight: bold; margin-bottom: 8px; color: #334155;">Registros de Entrada:</div>
+            <div class="tabela-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Data / Hora</th>
+                    <th>Evento</th>
+                    <th>Oficina / Atividade</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyAlunoHistorico"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Mensagem se o aluno existir mas tiver ZERO presenças -->
+          <div id="alertaZeroPresencas" class="alerta-sem-presenca" style="display: none;">
+            ⚠️ Este estudante está devidamente matriculado, mas <strong>não possui nenhuma presença</strong> registrada até o momento.
           </div>
         </div>
       </section>
@@ -143,8 +166,12 @@
     var dadosGlobais = null;
     var pinSessao = "";
 
+    function normalizar(str) {
+      if (!str) return "";
+      return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    }
+
     window.onload = function() {
-      // Tenta acesso inicial com PIN vazio (se a célula E2 estiver em branco, já entra direto)
       carregarDados("");
     };
 
@@ -245,7 +272,6 @@
       thead.innerHTML = "";
       tbody.innerHTML = "";
 
-      // Cabeçalho dinâmico com cada Evento
       var trHead = document.createElement("tr");
       trHead.innerHTML = "<th>Estudante</th>";
       dadosGlobais.eventos.forEach(function(ev) {
@@ -254,7 +280,6 @@
       trHead.innerHTML += "<th class='col-num'>Total Geral</th>";
       thead.appendChild(trHead);
 
-      // Alunos pertencentes à turma
       var alunosDaTurma = [];
       for (var nome in dadosGlobais.alunos) {
         if (dadosGlobais.alunos[nome].turma === turmaSel) {
@@ -272,7 +297,7 @@
         dadosGlobais.eventos.forEach(function(ev) { contagensPorEvento[ev] = 0; });
 
         dadosGlobais.presencas.forEach(function(p) {
-          if (p.discente.toUpperCase() === nome.toUpperCase()) {
+          if (normalizar(p.discente) === normalizar(nome)) {
             if (contagensPorEvento[p.evento] !== undefined) {
               contagensPorEvento[p.evento]++;
             }
@@ -292,18 +317,21 @@
       });
     }
 
-    // --- VISÃO 3: POR ALUNO ---
+    // --- VISÃO 3: POR ALUNO (COM FEEDBACK DE 0 PRESENÇAS E NÃO ENCONTRADO) ---
     function filtrarAlunosInput() {
-      var termo = document.getElementById("txtBuscaAluno").value.trim().toUpperCase();
+      var termo = normalizar(document.getElementById("txtBuscaAluno").value);
       var card = document.getElementById("cardAlunoDetalhe");
+      var alertaNaoEnc = document.getElementById("alertaNaoEncontrado");
+
       if (termo.length < 3) {
         card.style.display = "none";
+        alertaNaoEnc.style.display = "none";
         return;
       }
 
       var alunoEncontrado = null;
       for (var nome in dadosGlobais.alunos) {
-        if (nome.toUpperCase().indexOf(termo) > -1) {
+        if (normalizar(nome).indexOf(termo) > -1) {
           alunoEncontrado = dadosGlobais.alunos[nome];
           break;
         }
@@ -311,9 +339,11 @@
 
       if (!alunoEncontrado) {
         card.style.display = "none";
+        alertaNaoEnc.style.display = "block";
         return;
       }
 
+      alertaNaoEnc.style.display = "none";
       document.getElementById("detalheNome").innerText = alunoEncontrado.nome;
       document.getElementById("detalheTurma").innerText = alunoEncontrado.turma;
 
@@ -321,12 +351,22 @@
       tbody.innerHTML = "";
 
       var presAluno = dadosGlobais.presencas.filter(function(p) {
-        return p.discente.toUpperCase() === alunoEncontrado.nome.toUpperCase();
+        return normalizar(p.discente) === normalizar(alunoEncontrado.nome);
       });
 
+      var badgeTotal = document.getElementById("detalheTotalBadge");
+      var areaTabela = document.getElementById("areaTabelaAluno");
+      var alertaZero = document.getElementById("alertaZeroPresencas");
+
+      badgeTotal.innerText = presAluno.length + (presAluno.length === 1 ? " Presença" : " Presenças");
+
       if (presAluno.length === 0) {
-        tbody.innerHTML = "<tr><td colspan='3' style='text-align:center; color:#64748b;'>Nenhuma presença registrada.</td></tr>";
+        areaTabela.style.display = "none";
+        alertaZero.style.display = "block";
       } else {
+        areaTabela.style.display = "block";
+        alertaZero.style.display = "none";
+
         presAluno.forEach(function(p) {
           var tr = document.createElement("tr");
           var dtStr = p.dataHora;

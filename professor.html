@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Painel do Professor - Gestão de Presenças CEFET-MG</title>
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #f1f5f9; margin: 0; padding: 16px; display: flex; justify-content: center; }
+    .container { background: #ffffff; max-width: 950px; width: 100%; border-radius: 12px; padding: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+    
+    header { border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    h1 { color: #0b3954; font-size: 22px; margin: 0; }
+    .sub { font-size: 13px; color: #64748b; margin: 4px 0 0 0; }
+    .btn-recarregar { padding: 8px 14px; background: #e2e8f0; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; color: #334155; font-size: 12px; }
+    .btn-recarregar:hover { background: #cbd5e1; }
+
+    /* BLOCO DO PIN */
+    #blocoPin { max-width: 380px; margin: 40px auto; text-align: center; padding: 24px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; }
+    #blocoPin label { display: block; font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 8px; }
+    #txtPinDocente { width: 100%; padding: 11px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 15px; text-align: center; margin-bottom: 12px; outline: none; }
+    #btnEntrarDocente { width: 100%; padding: 11px; background: #0b3954; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    #msgPinErro { color: #dc2626; font-size: 13px; margin-top: 10px; display: none; font-weight: 600; }
+
+    /* CONTEÚDO PRINCIPAL */
+    #conteudoPainel { display: none; }
+    
+    /* BARRA DE BOTÕES DE NAVEGAÇÃO */
+    .nav-tabs { display: flex; gap: 8px; border-bottom: 2px solid #cbd5e1; padding-bottom: 8px; margin-bottom: 20px; }
+    .tab-btn { flex: 1; padding: 12px 10px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-weight: 600; color: #475569; cursor: pointer; transition: all 0.2s; text-align: center; }
+    .tab-btn:hover { background: #e2e8f0; color: #0b3954; }
+    .tab-btn.active { background: #0b3954; color: #ffffff; border-color: #0b3954; box-shadow: 0 2px 6px rgba(11,57,84,0.3); }
+
+    /* CARDS E TABELAS */
+    .view-section { display: none; }
+    .view-section.active { display: block; }
+
+    .filtro-box { margin-bottom: 16px; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .filtro-box label { font-size: 13px; font-weight: bold; color: #334155; }
+    .filtro-box select, .filtro-box input[type="text"] { padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 14px; outline: none; }
+    .filtro-box select { min-width: 240px; }
+    .filtro-box input[type="text"] { min-width: 280px; flex: 1; }
+
+    .grid-resumo-eventos { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .card-resumo { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; border-top: 4px solid #0b3954; }
+    .card-resumo .ev-titulo { font-size: 15px; font-weight: bold; color: #0b3954; margin-bottom: 8px; }
+    .card-resumo .ev-total { font-size: 26px; font-weight: bold; color: #10b981; margin-bottom: 10px; }
+    .lista-oficinas { font-size: 12px; color: #475569; border-top: 1px solid #e2e8f0; padding-top: 8px; }
+    .lista-oficinas div { display: flex; justify-content: space-between; padding: 3px 0; }
+
+    .tabela-wrapper { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+    th { background: #0b3954; color: white; padding: 10px 12px; font-weight: 600; white-space: nowrap; }
+    td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; color: #1e293b; }
+    tr:nth-child(even) td { background-color: #f8fafc; }
+    tr:hover td { background-color: #f1f5f9; }
+    .col-num { text-align: center; font-weight: bold; }
+    .badge-total { background: #10b981; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; }
+
+    .card-aluno-detalhe { border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; background: #fff; margin-top: 14px; display: none; }
+    .header-aluno { background: #0b3954; color: white; padding: 12px; border-radius: 6px; margin-bottom: 14px; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div>
+        <h1>Painel do Docente • CEFET-MG</h1>
+        <p class="sub">Acompanhamento e consolidação de presenças em eventos</p>
+      </div>
+      <button class="btn-recarregar" onclick="carregarDados()">🔄 Atualizar Dados</button>
+    </header>
+
+    <!-- 1. BLOCO DE AUTENTICAÇÃO POR PIN (se ativado na planilha) -->
+    <div id="blocoPin">
+      <label for="txtPinDocente">Acesso Docente (PIN):</label>
+      <input type="password" id="txtPinDocente" placeholder="Digite o PIN" autocomplete="off">
+      <button id="btnEntrarDocente" onclick="tentarEntrar()">Acessar Painel</button>
+      <div id="msgPinErro">PIN incorreto. Tente novamente.</div>
+    </div>
+
+    <!-- 2. PAINEL PRINCIPAL COM OS TRÊS BOTÕES -->
+    <div id="conteudoPainel">
+      <div class="nav-tabs">
+        <button id="btnTab1" class="tab-btn active" onclick="trocarAba(1)">📊 Frequência por Evento</button>
+        <button id="btnTab2" class="tab-btn" onclick="trocarAba(2)">👥 Frequência por Turma</button>
+        <button id="btnTab3" class="tab-btn" onclick="trocarAba(3)">🔍 Consulta por Aluno</button>
+      </div>
+
+      <!-- VISÃO 1: POR EVENTO -->
+      <section id="view1" class="view-section active">
+        <div class="grid-resumo-eventos" id="gridEventos"></div>
+      </section>
+
+      <!-- VISÃO 2: POR TURMA -->
+      <section id="view2" class="view-section">
+        <div class="filtro-box">
+          <label for="selTurma">Selecione a Turma:</label>
+          <select id="selTurma" onchange="renderizarTabelaTurma()"></select>
+          <span id="contagemTurma" style="font-size: 12px; color: #64748b; font-weight: bold;"></span>
+        </div>
+        <div class="tabela-wrapper">
+          <table id="tabelaTurma">
+            <thead id="theadTurma"></thead>
+            <tbody id="tbodyTurma"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- VISÃO 3: POR ALUNO -->
+      <section id="view3" class="view-section">
+        <div class="filtro-box">
+          <label for="txtBuscaAluno">Buscar Aluno:</label>
+          <input type="text" id="txtBuscaAluno" placeholder="Comece a digitar o nome..." oninput="filtrarAlunosInput()">
+        </div>
+        <div id="cardAlunoDetalhe" class="card-aluno-detalhe">
+          <div class="header-aluno">
+            <div id="detalheNome" style="font-size: 16px; font-weight: bold;"></div>
+            <div id="detalheTurma" style="font-size: 13px; opacity: 0.9;"></div>
+          </div>
+          <div style="font-weight: bold; margin-bottom: 8px; color: #334155;">Registros de Entrada:</div>
+          <div class="tabela-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data / Hora</th>
+                  <th>Evento</th>
+                  <th>Oficina / Atividade</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyAlunoHistorico"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbwCuyOlGVYnMU65_qo9jjl_bxW_VAQP6WwNje8t-V3JqCr4xOq8fKt2YTI6dmcfv7sF/exec";
+
+    var dadosGlobais = null;
+    var pinSessao = "";
+
+    window.onload = function() {
+      // Tenta acesso inicial com PIN vazio (se a célula E2 estiver em branco, já entra direto)
+      carregarDados("");
+    };
+
+    function tentarEntrar() {
+      var pin = document.getElementById("txtPinDocente").value.trim();
+      carregarDados(pin);
+    }
+
+    function carregarDados(pinInformado) {
+      var pin = (typeof pinInformado !== "undefined") ? pinInformado : pinSessao;
+      
+      fetch(URL_APPS_SCRIPT + "?acao=obterRelatorioDocente&pin=" + encodeURIComponent(pin))
+        .then(function(res) { return res.json(); })
+        .then(function(dados) {
+          if (dados.status === "erro_auth") {
+            document.getElementById("blocoPin").style.display = "block";
+            document.getElementById("conteudoPainel").style.display = "none";
+            document.getElementById("msgPinErro").style.display = "block";
+            return;
+          }
+
+          if (dados.status === "ok") {
+            pinSessao = pin;
+            dadosGlobais = dados;
+            document.getElementById("blocoPin").style.display = "none";
+            document.getElementById("conteudoPainel").style.display = "block";
+
+            renderizarVisaoEventos();
+            configurarSeletorTurmas();
+          }
+        })
+        .catch(function(err) {
+          alert("Erro ao conectar com a planilha. Tente recarregar a página.");
+        });
+    }
+
+    function trocarAba(abaNum) {
+      for (var i = 1; i <= 3; i++) {
+        document.getElementById("btnTab" + i).classList.remove("active");
+        document.getElementById("view" + i).classList.remove("active");
+      }
+      document.getElementById("btnTab" + abaNum).classList.add("active");
+      document.getElementById("view" + abaNum).classList.add("active");
+    }
+
+    // --- VISÃO 1: POR EVENTO ---
+    function renderizarVisaoEventos() {
+      var grid = document.getElementById("gridEventos");
+      grid.innerHTML = "";
+
+      var mapaEventos = {};
+      dadosGlobais.eventos.forEach(function(ev) {
+        mapaEventos[ev] = { total: 0, oficinas: {} };
+      });
+
+      dadosGlobais.presencas.forEach(function(p) {
+        if (!mapaEventos[p.evento]) {
+          mapaEventos[p.evento] = { total: 0, oficinas: {} };
+        }
+        mapaEventos[p.evento].total++;
+        mapaEventos[p.evento].oficinas[p.atividade] = (mapaEventos[p.evento].oficinas[p.atividade] || 0) + 1;
+      });
+
+      for (var ev in mapaEventos) {
+        var card = document.createElement("div");
+        card.className = "card-resumo";
+        
+        var htmlOficinas = "";
+        for (var ofic in mapaEventos[ev].oficinas) {
+          htmlOficinas += '<div><span>' + ofic + '</span><strong>' + mapaEventos[ev].oficinas[ofic] + '</strong></div>';
+        }
+
+        card.innerHTML = 
+          '<div class="ev-titulo">' + ev + '</div>' +
+          '<div class="ev-total">' + mapaEventos[ev].total + ' <span style="font-size:13px; color:#64748b; font-weight:normal;">presenças</span></div>' +
+          '<div class="lista-oficinas">' + (htmlOficinas || '<div>Nenhuma oficina registrada</div>') + '</div>';
+        grid.appendChild(card);
+      }
+    }
+
+    // --- VISÃO 2: POR TURMA ---
+    function configurarSeletorTurmas() {
+      var sel = document.getElementById("selTurma");
+      sel.innerHTML = "";
+      dadosGlobais.turmas.forEach(function(t) {
+        var opt = document.createElement("option");
+        opt.value = t;
+        opt.innerText = t;
+        sel.appendChild(opt);
+      });
+      renderizarTabelaTurma();
+    }
+
+    function renderizarTabelaTurma() {
+      var turmaSel = document.getElementById("selTurma").value;
+      var thead = document.getElementById("theadTurma");
+      var tbody = document.getElementById("tbodyTurma");
+      thead.innerHTML = "";
+      tbody.innerHTML = "";
+
+      // Cabeçalho dinâmico com cada Evento
+      var trHead = document.createElement("tr");
+      trHead.innerHTML = "<th>Estudante</th>";
+      dadosGlobais.eventos.forEach(function(ev) {
+        trHead.innerHTML += "<th class='col-num'>" + ev + "</th>";
+      });
+      trHead.innerHTML += "<th class='col-num'>Total Geral</th>";
+      thead.appendChild(trHead);
+
+      // Alunos pertencentes à turma
+      var alunosDaTurma = [];
+      for (var nome in dadosGlobais.alunos) {
+        if (dadosGlobais.alunos[nome].turma === turmaSel) {
+          alunosDaTurma.push(nome);
+        }
+      }
+      alunosDaTurma.sort();
+      document.getElementById("contagemTurma").innerText = alunosDaTurma.length + " alunos matriculados";
+
+      alunosDaTurma.forEach(function(nome) {
+        var tr = document.createElement("tr");
+        var contagensPorEvento = {};
+        var totalGeral = 0;
+
+        dadosGlobais.eventos.forEach(function(ev) { contagensPorEvento[ev] = 0; });
+
+        dadosGlobais.presencas.forEach(function(p) {
+          if (p.discente.toUpperCase() === nome.toUpperCase()) {
+            if (contagensPorEvento[p.evento] !== undefined) {
+              contagensPorEvento[p.evento]++;
+            }
+            totalGeral++;
+          }
+        });
+
+        var htmlLinha = "<td><strong>" + nome + "</strong></td>";
+        dadosGlobais.eventos.forEach(function(ev) {
+          var val = contagensPorEvento[ev];
+          htmlLinha += "<td class='col-num' style='color:" + (val > 0 ? "#0b3954" : "#94a3b8") + "'>" + val + "</td>";
+        });
+        htmlLinha += "<td class='col-num'><span class='badge-total'>" + totalGeral + "</span></td>";
+
+        tr.innerHTML = htmlLinha;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // --- VISÃO 3: POR ALUNO ---
+    function filtrarAlunosInput() {
+      var termo = document.getElementById("txtBuscaAluno").value.trim().toUpperCase();
+      var card = document.getElementById("cardAlunoDetalhe");
+      if (termo.length < 3) {
+        card.style.display = "none";
+        return;
+      }
+
+      var alunoEncontrado = null;
+      for (var nome in dadosGlobais.alunos) {
+        if (nome.toUpperCase().indexOf(termo) > -1) {
+          alunoEncontrado = dadosGlobais.alunos[nome];
+          break;
+        }
+      }
+
+      if (!alunoEncontrado) {
+        card.style.display = "none";
+        return;
+      }
+
+      document.getElementById("detalheNome").innerText = alunoEncontrado.nome;
+      document.getElementById("detalheTurma").innerText = alunoEncontrado.turma;
+
+      var tbody = document.getElementById("tbodyAlunoHistorico");
+      tbody.innerHTML = "";
+
+      var presAluno = dadosGlobais.presencas.filter(function(p) {
+        return p.discente.toUpperCase() === alunoEncontrado.nome.toUpperCase();
+      });
+
+      if (presAluno.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='3' style='text-align:center; color:#64748b;'>Nenhuma presença registrada.</td></tr>";
+      } else {
+        presAluno.forEach(function(p) {
+          var tr = document.createElement("tr");
+          var dtStr = p.dataHora;
+          try {
+            if (typeof dtStr === "string" && dtStr.indexOf("T") > -1) {
+              var d = new Date(dtStr);
+              dtStr = d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' });
+            }
+          } catch(e) {}
+
+          tr.innerHTML = "<td>" + dtStr + "</td><td><strong>" + p.evento + "</strong></td><td>" + p.atividade + "</td>";
+          tbody.appendChild(tr);
+        });
+      }
+
+      card.style.display = "block";
+    }
+  </script>
+</body>
+</html>
